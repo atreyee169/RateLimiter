@@ -19,3 +19,6 @@ Build the project using command: mvn package
 Run the jar using command: java -jar target/ratelimiter-0.0.1-SNAPSHOT.jar
 
 ![alt text](https://github.com/atreyee169/RateLimiter/blob/master/UserRateLimiter.PNG)
+
+# Improvements
+Endpoint can be added for registering User and configuring rate limit per user per api
