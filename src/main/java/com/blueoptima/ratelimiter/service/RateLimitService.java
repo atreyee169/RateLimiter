@@ -11,6 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.blueoptima.ratelimiter.beans.UserAccess;
 import com.blueoptima.ratelimiter.beans.UserConfig;
@@ -21,6 +23,7 @@ import com.blueoptima.ratelimiter.repository.UserConfigRepo;
 import com.blueoptima.ratelimiter.repository.UserRepo;
 
 @Service
+@Transactional(isolation=Isolation.REPEATABLE_READ)
 public class RateLimitService {
 
 	@Autowired
@@ -32,6 +35,7 @@ public class RateLimitService {
 	
 	private static final Logger log = LoggerFactory.getLogger(RateLimitService.class);
 	
+	@Transactional(isolation = Isolation.READ_COMMITTED)
 	public boolean doRateLimit(String username,String uri,long currentReqTs)
 	{
 		/*Get user object for username*/
@@ -74,6 +78,15 @@ public class RateLimitService {
 	{
 		log.info("Current request arr size:"+apiAccessArr.size()+";"+apiAccessArr);
 		Set<String> requestTimestampSet=new LinkedHashSet<String>(apiAccessArr);
+		
+		/* If user api timestamp list is less than the api rate limit, allow this request*/
+		if(apiAccessArr.size()<apiRateLimit)
+		{
+				apiAccessArr.add(currentReqTs+"");
+				log.info("Updated request arr size:"+apiAccessArr.size()+";"+apiAccessArr);
+				return true;
+		}
+		/* If user api timmestamp list has already reached the api rate limit then try to delete entries older than a minute*/
 		/*Remove requests older than a minute*/
 		for(String str:requestTimestampSet)
 		{
@@ -81,11 +94,13 @@ public class RateLimitService {
 			long interval=(currentReqTs-prevReqtime)/(1000*60);
 			if(interval>1)
 				apiAccessArr.remove(str);
+			else break;/* If one of the older intervals is not greaer than a minute then the newer ones will also not be greater than a minute;
+			so no need to chk further*/
 		}
 				
 		if(apiAccessArr.size()>=apiRateLimit)
 			return false;
-		
+			
 		apiAccessArr.add(currentReqTs+"");
 		log.info("Updated request arr size:"+apiAccessArr.size()+";"+apiAccessArr);
 		return true;

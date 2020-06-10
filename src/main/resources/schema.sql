@@ -26,8 +26,7 @@ rate_limit int default 20,
 foreign key(user_id) references USERS(user_id));
 
 CREATE TABLE USER_ACCESS(
-access_id bigint AUTO_INCREMENT primary key,
-config_id bigint,
+config_id bigint primary key,
 request_arr CLOB,
 foreign key(config_id) references user_config(config_id)
 );
